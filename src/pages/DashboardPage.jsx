@@ -1,54 +1,131 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-// Datos de ejemplo (reemplaza con tu import real)
-const dashboardData = {
-  statsByRange: {
-    today: [
-      { id: 1, title: 'Tickets Activos', value: '12', change: '+5%', isPositive: true },
-      { id: 2, title: 'Tiempo Respuesta', value: '2.3h', change: '-15%', isPositive: true },
-      { id: 3, title: 'Satisfacción', value: '94%', change: '+2%', isPositive: true },
-      { id: 4, title: 'Riesgo Churn', value: '8', change: '+25%', isPositive: false }
-    ],
-    week: [
-      { id: 1, title: 'Tickets Activos', value: '45', change: '+12%', isPositive: true },
-      { id: 2, title: 'Tiempo Respuesta', value: '3.1h', change: '-8%', isPositive: true },
-      { id: 3, title: 'Satisfacción', value: '92%', change: '+3%', isPositive: true },
-      { id: 4, title: 'Riesgo Churn', value: '18', change: '+10%', isPositive: false }
-    ],
-    month: [
-      { id: 1, title: 'Tickets Activos', value: '156', change: '+8%', isPositive: true },
-      { id: 2, title: 'Tiempo Respuesta', value: '3.5h', change: '-5%', isPositive: true },
-      { id: 3, title: 'Satisfacción', value: '91%', change: '+1%', isPositive: true },
-      { id: 4, title: 'Riesgo Churn', value: '42', change: '+15%', isPositive: false }
-    ],
-    custom: [
-      { id: 1, title: 'Tickets Activos', value: '--', change: '--', isPositive: true },
-      { id: 2, title: 'Tiempo Respuesta', value: '--', change: '--', isPositive: true },
-      { id: 3, title: 'Satisfacción', value: '--', change: '--', isPositive: true },
-      { id: 4, title: 'Riesgo Churn', value: '--', change: '--', isPositive: false }
-    ]
-  }
-};
+import ticketsService from '../services/ticketsService';
 
 function DashboardPage() {
   const navigate = useNavigate();
   const [timeRange, setTimeRange] = useState('week');
+  const [tickets, setTickets] = useState([]);
   const [stats, setStats] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [chartData, setChartData] = useState([]);
 
-  // Se actualiza cuando cambia el timeRange
   useEffect(() => {
+    loadDashboardData();
+  }, [timeRange]);
+
+  const loadDashboardData = async () => {
+    setLoading(true);
     try {
-      const newStats = dashboardData.statsByRange?.[timeRange];
-      setStats(Array.isArray(newStats) ? newStats : []);
-      setLoading(false);
-      console.log('✅ Datos del dashboard cargados correctamente');
+      const allTickets = await ticketsService.getTickets({});
+      setTickets(allTickets);
+      calculateStats(allTickets);
+      calculateChartData(allTickets);
     } catch (error) {
-      console.error('❌ Error cargando datos del dashboard:', error);
+      console.error('Error loading dashboard data:', error);
+    } finally {
       setLoading(false);
     }
-  }, [timeRange]); // Ahora se ejecuta cuando cambia timeRange
+  };
+
+  const calculateStats = (ticketsList) => {
+    const now = new Date();
+    let filteredTickets = ticketsList;
+
+    // Filtrar por rango de tiempo
+    if (timeRange === 'today') {
+      filteredTickets = ticketsList.filter(t => {
+        const ticketDate = new Date(t.createdAt);
+        return ticketDate.toDateString() === now.toDateString();
+      });
+    } else if (timeRange === 'week') {
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      filteredTickets = ticketsList.filter(t => new Date(t.createdAt) >= weekAgo);
+    } else if (timeRange === 'month') {
+      const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      filteredTickets = ticketsList.filter(t => new Date(t.createdAt) >= monthAgo);
+    }
+
+    // Calcular estadísticas
+    const activeTickets = filteredTickets.filter(t => t.status === 'Abierto').length;
+    const closedTickets = filteredTickets.filter(t => t.status === 'Finalizado').length;
+    
+    // Contar tickets de alto riesgo (Emergencia, Crítico, Alto)
+    const highRiskTickets = filteredTickets.filter(t => 
+      ['Emergencia', 'Critico', 'Alto'].includes(t.priority)
+    ).length;
+
+    // Calcular satisfacción basada en proporción de tickets cerrados
+    const satisfaction = filteredTickets.length > 0 
+      ? Math.round((closedTickets / filteredTickets.length) * 100) 
+      : 0;
+
+    // Calcular tiempo promedio de respuesta (simulado basado en prioridad)
+    const avgResponseTime = filteredTickets.length > 0
+      ? (filteredTickets.reduce((acc, t) => {
+          if (t.priority === 'Emergencia') return acc + 0.5;
+          if (t.priority === 'Critico') return acc + 1;
+          if (t.priority === 'Alto') return acc + 2;
+          return acc + 4;
+        }, 0) / filteredTickets.length).toFixed(1)
+      : '0';
+
+    setStats([
+      { 
+        id: 1, 
+        title: 'Tickets Activos', 
+        value: activeTickets.toString(), 
+        change: '+5%', 
+        isPositive: true 
+      },
+      { 
+        id: 2, 
+        title: 'Tiempo Respuesta', 
+        value: `${avgResponseTime}h`, 
+        change: '-15%', 
+        isPositive: true 
+      },
+      { 
+        id: 3, 
+        title: 'Satisfacción', 
+        value: `${satisfaction}%`, 
+        change: '+2%', 
+        isPositive: true 
+      },
+      { 
+        id: 4, 
+        title: 'Riesgo Alto', 
+        value: highRiskTickets.toString(), 
+        change: '+25%', 
+        isPositive: false 
+      }
+    ]);
+  };
+
+  const calculateChartData = (ticketsList) => {
+    const last7Days = [];
+    const now = new Date();
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dayTickets = ticketsList.filter(t => {
+        const ticketDate = new Date(t.createdAt);
+        return ticketDate.toDateString() === date.toDateString();
+      });
+      
+      const highRisk = dayTickets.filter(t => 
+        ['Emergencia', 'Critico', 'Alto'].includes(t.priority)
+      ).length;
+      
+      last7Days.push({
+        day: ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'][date.getDay()],
+        total: dayTickets.length,
+        highRisk: highRisk
+      });
+    }
+    
+    setChartData(last7Days);
+  };
 
   const handleTimeRangeChange = (rangeId) => {
     setTimeRange(rangeId);
@@ -57,33 +134,25 @@ function DashboardPage() {
   const timeRanges = [
     { id: 'today', label: 'Hoy' },
     { id: 'week', label: 'Últimos 7 días' },
-    { id: 'month', label: 'Últimos 30 días' },
-    { id: 'custom', label: 'calendar_today', isIcon: true }
+    { id: 'month', label: 'Últimos 30 días' }
   ];
 
-  const alerts = [
-    {
-      id: 1,
-      type: 'warning',
-      icon: 'trending_down',
-      title: 'Riesgo de Churn: Cliente X',
-      description: 'Actividad reducida un 60%.'
-    },
-    {
-      id: 2,
-      type: 'danger',
-      icon: 'security',
-      title: 'Alerta de Seguridad',
-      description: 'Intento de phishing detectado.'
-    },
-    {
-      id: 3,
-      type: 'warning',
-      icon: 'trending_down',
-      title: 'Riesgo de Churn: Acme Corp',
-      description: 'Tickets de soporte negativos.'
-    }
-  ];
+  // Generar alertas basadas en tickets reales
+  const generateAlerts = () => {
+    const highPriorityTickets = tickets.filter(t => 
+      ['EMERGENCIA', 'CRÍTICO', 'ALTO' ].includes(t.priority) && t.status === 'Abierto'
+    );
+
+    return highPriorityTickets.slice(0, 3).map((ticket, idx) => ({
+      id: idx + 1,
+      type: ticket.priority === 'Emergencia' ? 'danger' : 'warning',
+      icon: ticket.priority === 'Emergencia' ? 'security' : 'trending_down',
+      title: `${ticket.priority}: ${ticket.customer || 'Cliente'}`,
+      description: ticket.title.substring(0, 50) + '...'
+    }));
+  };
+
+  const alerts = generateAlerts();
 
   const getAlertColor = (type) => {
     switch (type) {
@@ -99,9 +168,12 @@ function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-100 dark:bg-slate-950">
-        <p className="text-slate-600 dark:text-slate-300 font-medium">
-          Cargando dashboard...
-        </p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-300 font-medium">
+            Cargando dashboard...
+          </p>
+        </div>
       </div>
     );
   }
@@ -139,11 +211,7 @@ function DashboardPage() {
                     : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
-                {range.isIcon ? (
-                  <span className="material-symbols-outlined !text-xl">{range.label}</span>
-                ) : (
-                  <span>{range.label}</span>
-                )}
+                <span>{range.label}</span>
               </button>
             ))}
           </div>
@@ -155,7 +223,7 @@ function DashboardPage() {
             Resumen General
           </h2>
           <div className="grid grid-cols-2 gap-4">
-            {(stats || []).map(stat => (
+            {stats.map(stat => (
               <div
                 key={stat.id}
                 className="flex flex-col gap-2 rounded-lg bg-white dark:bg-slate-900 p-4 shadow-sm border border-slate-200 dark:border-slate-800"
@@ -191,84 +259,6 @@ function DashboardPage() {
           </div>
         </section>
 
-        {/* Churn Risk Chart */}
-        <section className="rounded-lg bg-white dark:bg-slate-900 p-4 shadow-sm border border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-white">
-                Evolución Riesgo de Churn
-              </h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Últimos 7 días
-              </p>
-            </div>
-            <button className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-              <span className="material-symbols-outlined">more_vert</span>
-            </button>
-          </div>
-
-          <div className="relative h-48">
-            <div className="absolute inset-0 grid grid-rows-4">
-              <div className="border-t border-dashed border-slate-200 dark:border-slate-700"></div>
-              <div className="border-t border-dashed border-slate-200 dark:border-slate-700"></div>
-              <div className="border-t border-dashed border-slate-200 dark:border-slate-700"></div>
-              <div className="border-t border-dashed border-slate-200 dark:border-slate-700"></div>
-            </div>
-
-            <svg
-              className="absolute inset-0 h-full w-full"
-              fill="none"
-              viewBox="0 0 300 192"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <defs>
-                <linearGradient id="churnGradient" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#DD6B20" stopOpacity="0.2"></stop>
-                  <stop offset="100%" stopColor="#DD6B20" stopOpacity="0"></stop>
-                </linearGradient>
-              </defs>
-              <path
-                d="M 0 115.2 L 50 96 L 100 124.8 L 150 105.6 L 200 67.2 L 250 86.4 L 300 57.6 L 300 192 L 0 192 Z"
-                fill="url(#churnGradient)"
-              ></path>
-              <path
-                className="stroke-amber-500"
-                d="M 0 115.2 L 50 96 L 100 124.8 L 150 105.6 L 200 67.2 L 250 86.4 L 300 57.6"
-                strokeWidth="2"
-              ></path>
-              <circle
-                className="fill-amber-500 stroke-2 stroke-white dark:stroke-slate-900"
-                cx="200"
-                cy="67.2"
-                r="4"
-              ></circle>
-            </svg>
-
-            <div className="absolute bottom-0 left-[calc(66.66%-8px)] flex flex-col items-center">
-              <div className="mb-2 rounded bg-slate-900 dark:bg-slate-100 px-2 py-1 text-xs text-white dark:text-slate-900">
-                <p className="font-bold">18 Clientes</p>
-                <p className="opacity-80">Jueves</p>
-              </div>
-              <div className="h-2 w-px bg-slate-900 dark:bg-white"></div>
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-7 text-center">
-            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, idx) => (
-              <p
-                key={idx}
-                className={`text-xs font-medium ${
-                  idx === 3
-                    ? 'font-bold text-slate-900 dark:text-white'
-                    : 'text-slate-600 dark:text-slate-400'
-                }`}
-              >
-                {day}
-              </p>
-            ))}
-          </div>
-        </section>
-
         {/* Ticket Volume Chart */}
         <section className="rounded-lg bg-white dark:bg-slate-900 p-4 shadow-sm border border-slate-200 dark:border-slate-800">
           <h3 className="font-semibold text-slate-900 dark:text-white mb-1">
@@ -279,64 +269,100 @@ function DashboardPage() {
           </p>
 
           <div className="grid h-40 grid-flow-col items-end justify-items-center gap-4 px-2">
-            {[30, 90, 20, 30, 70, 40, 80].map((height, idx) => (
-              <div
-                key={idx}
-                className={`w-full rounded-t-lg transition-all ${
-                  idx === 4
-                    ? 'bg-blue-600'
-                    : 'bg-blue-600/20 dark:bg-blue-600/30'
-                }`}
-                style={{ height: `${height}%` }}
-              ></div>
-            ))}
+            {chartData.map((day, idx) => {
+              const maxTickets = Math.max(...chartData.map(d => d.total), 1);
+              const height = (day.total / maxTickets) * 100;
+              return (
+                <div
+                  key={idx}
+                  className="w-full rounded-t-lg transition-all bg-blue-600/80 hover:bg-blue-600"
+                  style={{ height: `${Math.max(height, 10)}%` }}
+                  title={`${day.total} tickets`}
+                ></div>
+              );
+            })}
           </div>
 
           <div className="mt-4 grid grid-flow-col justify-items-center gap-4 px-2">
-            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, idx) => (
+            {chartData.map((day, idx) => (
               <p
                 key={idx}
-                className={`text-xs font-medium ${
-                  idx === 4
-                    ? 'text-blue-600 font-semibold'
-                    : 'text-slate-600 dark:text-slate-400'
-                }`}
+                className="text-xs font-medium text-slate-600 dark:text-slate-400"
               >
-                {day}
+                {day.day}
+              </p>
+            ))}
+          </div>
+        </section>
+
+        {/* High Risk Tickets Chart */}
+        <section className="rounded-lg bg-white dark:bg-slate-900 p-4 shadow-sm border border-slate-200 dark:border-slate-800">
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-1">
+            Tickets de Alto Riesgo
+          </h3>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            Últimos 7 días
+          </p>
+
+          <div className="grid h-40 grid-flow-col items-end justify-items-center gap-4 px-2">
+            {chartData.map((day, idx) => {
+              const maxRisk = Math.max(...chartData.map(d => d.highRisk), 1);
+              const height = (day.highRisk / maxRisk) * 100;
+              return (
+                <div
+                  key={idx}
+                  className="w-full rounded-t-lg transition-all bg-red-600/80 hover:bg-red-600"
+                  style={{ height: `${Math.max(height, 10)}%` }}
+                  title={`${day.highRisk} tickets de alto riesgo`}
+                ></div>
+              );
+            })}
+          </div>
+
+          <div className="mt-4 grid grid-flow-col justify-items-center gap-4 px-2">
+            {chartData.map((day, idx) => (
+              <p
+                key={idx}
+                className="text-xs font-medium text-slate-600 dark:text-slate-400"
+              >
+                {day.day}
               </p>
             ))}
           </div>
         </section>
 
         {/* Recent Alerts */}
-        <section className="pb-6">
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
-            Alertas Recientes
-          </h2>
-          <div className="flex flex-col gap-3">
-            {alerts.map(alert => (
-              <button
-                key={alert.id}
-                className="flex items-center gap-4 rounded-lg bg-white dark:bg-slate-900 p-4 shadow-sm border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
-              >
-                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${getAlertColor(alert.type)}`}>
-                  <span className="material-symbols-outlined">{alert.icon}</span>
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-slate-900 dark:text-white">
-                    {alert.title}
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    {alert.description}
-                  </p>
-                </div>
-                <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 shrink-0">
-                  chevron_right
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+        {alerts.length > 0 && (
+          <section className="pb-6">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
+              Alertas Recientes
+            </h2>
+            <div className="flex flex-col gap-3">
+              {alerts.map(alert => (
+                <button
+                  key={alert.id}
+                  className="flex items-center gap-4 rounded-lg bg-white dark:bg-slate-900 p-4 shadow-sm border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-left"
+                  onClick={() => navigate('/tickets')}
+                >
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${getAlertColor(alert.type)}`}>
+                    <span className="material-symbols-outlined">{alert.icon}</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-slate-900 dark:text-white">
+                      {alert.title}
+                    </p>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      {alert.description}
+                    </p>
+                  </div>
+                  <span className="material-symbols-outlined text-slate-600 dark:text-slate-400 shrink-0">
+                    chevron_right
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
 
       {/* Floating Action Button */}
@@ -344,7 +370,7 @@ function DashboardPage() {
         onClick={() => navigate('/tickets')}
         className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 dark:bg-blue-500 text-white shadow-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-all transform hover:scale-110 active:scale-95"
       >
-        <span className="material-symbols-outlined text-3xl">arrow_back</span>
+        <span className="material-symbols-outlined text-3xl">inbox</span>
       </button>
     </div>
   );

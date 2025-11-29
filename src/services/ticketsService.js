@@ -11,16 +11,27 @@ class TicketsService {
       const response = await apiClient.get(url);
       const data = response.data; // array de tickets del backend
 
+      // Mapeo de nivel de recomendación a color
+        const priorityColorMap = {
+          'EMERGENCIA': 'red',
+          'CRÍTICO': 'orange',
+          'ALTO': 'yellow',
+          'MEDIO-ALTO': 'purple',
+          'MEDIO': 'blue',
+          'BAJO': 'green',
+          'ÓPTIMO': 'green'
+        };
+
+
       const tickets = data.map((t) => ({
         id: t.ID_Ticket,
         title: t.Titulo,
         sender: t.Cliente?.nombre || "Sin cliente",
         time: new Date(t.Fecha_Creacion).toLocaleString(),
-        status: t.Estado_Actual,
+        status: t.Estado_Actual || "Abierto",
         priority: t.Recomendacion?.level || "medium",
         icon: "inbox",
-        color: "blue",
-        closed: t.Estado_Actual === "Cerrado" || t.Estado_Actual === "Finalizado",
+        color: priorityColorMap[t.Recomendacion?.level] || "blue",
         customer: t.Cliente?.nombre,
         assignedTo: t.Account_Manager?.nombre || "Sin asignar",
         createdAt: t.Fecha_Creacion,

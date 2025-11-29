@@ -292,7 +292,10 @@ function TicketDetailPage() {
         {/* Message */}
         <div className="px-4 pt-2">
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm p-4 border border-slate-100 dark:border-slate-800">
-            <p className="text-slate-900 dark:text-white text-base font-normal leading-relaxed">
+            <p className="text-slate-600 dark:text-slate-400 text-xs font-bold mb-2">
+              Descripción del caso
+            </p>
+            <p className="text-slate-900 text-bold dark:text-white text-base font-normal leading-relaxed">
               {ticket.message}
             </p>
           </div>
@@ -321,24 +324,10 @@ function TicketDetailPage() {
                 </span>
                 <div>
                   <p className="font-semibold text-slate-900 dark:text-white">
-                    Análisis del problema
-                  </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                    {ticket.message}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-white/50 dark:bg-slate-900/50 rounded-lg">
-                <span className="material-symbols-outlined text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0 font-bold">
-                  task_alt
-                </span>
-                <div>
-                  <p className="font-semibold text-slate-900 dark:text-white">
                     Acción Sugerida
                   </p>
                   <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                    Revisar el ticket y responder considerando la prioridad y descripción del
-                    problema.
+                    {ticket.recomendacionMensaje}
                   </p>
                 </div>
               </div>
@@ -370,7 +359,7 @@ function TicketDetailPage() {
                 {ticket.activities.map((activity, index) => (
                   <div
                     key={activity.id}
-                    className="flex gap-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 p-3 rounded-lg transition-colors duration-200"
+                    className="flex gap-4 hover:bg-cyan-100 dark:hover:bg-slate-800/50 p-3 rounded-lg transition-colors duration-200"
                   >
                     <div className="flex flex-col items-center">
                       <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 mt-1.5 shadow-md"></div>
@@ -404,7 +393,7 @@ function TicketDetailPage() {
           className="flex h-14 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-500 dark:to-cyan-500 px-4 text-base font-bold text-white hover:from-blue-700 hover:to-cyan-700 dark:hover:from-blue-600 dark:hover:to-cyan-600 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
         >
           <span className="material-symbols-outlined text-xl">send</span>
-          Cambiar Estado y Responder
+          Cambiar Estado y Comentar
         </button>
       </footer>
 

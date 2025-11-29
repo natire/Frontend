@@ -8,8 +8,8 @@ import ticketsService from '../services/ticketsService';
 
 const filterButtons = [
   { id: "all", label: "Todos" },
-  { id: "new", label: "Nuevos" },
-  { id: "closed", label: "Cerrados" }
+  { id: "apen", label: "Abierto" },
+  { id: "closed", label: "Finalizado" }
 ];
 
 function InboxPage() {
@@ -27,8 +27,13 @@ function InboxPage() {
   const loadTickets = async () => {
     setLoading(true);
     try {
+      // 👇 MAPEAR el filtro del frontend al valor que espera el backend
+      let statusFilter;
+      if (activeFilter === 'open') statusFilter = 'Abierto';
+      else if (activeFilter === 'closed') statusFilter = 'Finalizado';
+      
       const data = await ticketsService.getTickets({
-        status: activeFilter !== 'all' ? activeFilter : undefined,
+        status: statusFilter, // Enviar "Abierto" o "Finalizado" o undefined
         search: searchQuery
       });
       setTickets(data);

@@ -1,63 +1,9 @@
 import { useState } from 'react';
 
-// Datos simulados como si vinieran de un JSON
-const ticketsData = [
-  {
-    id: 1,
-    title: "Fallo crítico en el servidor de pagos",
-    sender: "Carlos Mendoza",
-    time: "Hace 15 min",
-    status: "urgent",
-    icon: "local_fire_department",
-    color: "red",
-    closed: false
-  },
-  {
-    id: 2,
-    title: "Problema con el inicio de sesión",
-    sender: "Ana García",
-    time: "Hace 2 horas",
-    status: "new",
-    icon: "inbox",
-    color: "blue",
-    closed: false
-  },
-  {
-    id: 3,
-    title: "Consulta sobre la factura #12345",
-    sender: "John Doe",
-    time: "Hace 5 horas",
-    status: "pending",
-    icon: "hourglass_top",
-    color: "purple",
-    closed: false
-  },
-  {
-    id: 4,
-    title: "No puedo actualizar mi perfil",
-    sender: "Maria Lopez",
-    time: "Ayer",
-    status: "closed",
-    icon: "task_alt",
-    color: "green",
-    closed: true
-  },
-  {
-    id: 5,
-    title: "Solicitud de nueva funcionalidad",
-    sender: "Tech Solutions Inc.",
-    time: "Hace 2 días",
-    status: "new",
-    icon: "inbox",
-    color: "blue",
-    closed: false
-  }
-];
 
 const filterButtons = [
   { id: "all", label: "Todos" },
-  { id: "new", label: "Nuevos" },
-  { id: "assigned", label: "Asignados a mí" },
+  { id: "open", label: "Abiertos" },
   { id: "closed", label: "Cerrados" }
 ];
 
@@ -71,9 +17,8 @@ function App() {
                          ticket.sender.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (activeFilter === "all") return matchesSearch;
-    if (activeFilter === "new") return matchesSearch && ticket.status === "new";
-    if (activeFilter === "closed") return matchesSearch && ticket.closed;
-    if (activeFilter === "assigned") return matchesSearch && !ticket.closed;
+    if (activeFilter === "open") return matchesSearch && ticket.status === "Abierto";
+    if (activeFilter === "closed") return matchesSearch && ticket.status === "Finalizado";
     
     return matchesSearch;
   });
