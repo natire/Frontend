@@ -1,0 +1,22 @@
+{
+  "statsByRange": {
+    "today": [
+      { "id": 1, "title": "Tickets creados hoy", "value": 8, "change": "+14%", "isPositive": true },
+      { "id": 2, "title": "Tickets críticos hoy", "value": 3, "change": "+1", "isPositive": false },
+      { "id": 3, "title": "Tiempo medio de resolución", "value": "2.8 h", "change": "-10%", "isPositive": true },
+      { "id": 4, "title": "Satisfacción del cliente", "value": "4.7 / 5", "change": "+0.1", "isPositive": true }
+    ],
+    "week": [
+      { "id": 1, "title": "Tickets últimos 7 días", "value": 52, "change": "+18%", "isPositive": true },
+      { "id": 2, "title": "Tickets críticos", "value": 14, "change": "+4%", "isPositive": false },
+      { "id": 3, "title": "Tiempo medio de resolución", "value": "3.4 h", "change": "-22%", "isPositive": true },
+      { "id": 4, "title": "Satisfacción del cliente", "value": "4.6 / 5", "change": "+0.3", "isPositive": true }
+    ],
+    "month": [
+      { "id": 1, "title": "Tickets últimos 30 días", "value": 105, "change": "+25%", "isPositive": true },
+      { "id": 2, "title": "Tickets críticos", "value": 27, "change": "+7%", "isPositive": false },
+      { "id": 3, "title": "Tiempo medio de resolución", "value": "3.9 h", "change": "-15%", "isPositive": true },
+      { "id": 4, "title": "Satisfacción del cliente", "value": "4.5 / 5", "change": "+0.2", "isPositive": true }
+    ]
+  }
+}
