@@ -27,6 +27,7 @@ class TicketsService {
         id: t.ID_Ticket,
         title: t.Titulo,
         sender: t.Cliente?.nombre || "Sin cliente",
+        account_Manager: t.Account_Manager,
         time: new Date(t.Fecha_Creacion).toLocaleString(),
         status: t.Estado_Actual || "Abierto",
         priority: t.Recomendacion?.level || "medium",

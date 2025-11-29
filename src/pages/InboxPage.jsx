@@ -8,7 +8,7 @@ import ticketsService from '../services/ticketsService';
 
 const filterButtons = [
   { id: "all", label: "Todos" },
-  { id: "apen", label: "Abierto" },
+  { id: "open", label: "Abierto" },
   { id: "closed", label: "Finalizado" }
 ];
 
@@ -19,24 +19,42 @@ function InboxPage() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFabMenu, setShowFabMenu] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
+    // Obtener información del usuario desde localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+      }
+    }
+    
     loadTickets();
   }, [activeFilter, searchQuery]);
 
   const loadTickets = async () => {
     setLoading(true);
     try {
-      // 👇 MAPEAR el filtro del frontend al valor que espera el backend
+      // Mapear el filtro del frontend al valor que espera el backend
       let statusFilter;
       if (activeFilter === 'open') statusFilter = 'Abierto';
       else if (activeFilter === 'closed') statusFilter = 'Finalizado';
       
       const data = await ticketsService.getTickets({
-        status: statusFilter, // Enviar "Abierto" o "Finalizado" o undefined
+        status: statusFilter,
         search: searchQuery
       });
-      setTickets(data);
+
+      const filtered = data.filter(ticket => 
+        ticket.account_Manager.id === user?.user_id
+      );
+
+      console.log("Tickets filtrados:", filtered);
+
+      setTickets(filtered);
     } catch (error) {
       console.error('Error loading tickets:', error);
     } finally {
@@ -44,13 +62,58 @@ function InboxPage() {
     }
   };
 
-  console.log("Tickets en InboxPage:", tickets);
+  const handleLogout = () => {
+    // Limpiar localStorage
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('isAuthenticated');
+    
+    // Redirigir al login
+    navigate('/login');
+  };
 
+  console.log("Tickets en InboxPage:", tickets);
 
   return (
     <div className="relative flex min-h-screen w-screen flex-col bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 overflow-x-hidden">
       <div className="sticky top-0 z-10 flex flex-col bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 w-full">
-        <Header title="Bandeja de Entrada" />
+        {/* Header con usuario y logout */}
+        <div className="flex items-center justify-between p-4 pb-2">
+          <div className="flex items-center gap-3">
+            <div className="text-slate-800 dark:text-white flex size-12 shrink-0 items-center">
+              <span className="material-symbols-outlined text-3xl">inbox</span>
+            </div>
+            <h2 className="text-slate-900 dark:text-white text-xl font-bold leading-tight tracking-tight">
+              Bandeja de Entrada
+            </h2>
+          </div>
+          
+          {/* User menu */}
+          <div className="flex items-center gap-3">
+            {user && (
+              <div className="hidden md:flex flex-col items-end">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                  {user.nombre || user.username || 'Usuario'}
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {user.correo || user.email}
+                </p>
+              </div>
+            )}
+            
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 
+                       border border-red-500/30 text-red-600 dark:text-red-400 transition-all
+                       hover:scale-105 active:scale-95"
+              title="Cerrar sesión"
+            >
+              <span className="material-symbols-outlined text-xl">logout</span>
+              <span className="hidden sm:inline text-sm font-medium">Cerrar sesión</span>
+            </button>
+          </div>
+        </div>
+        
         <SearchBar
           value={searchQuery}
           onChange={setSearchQuery}
@@ -112,4 +175,4 @@ function InboxPage() {
   );
 }
 
-export default InboxPage;
+export default InboxPage;
